@@ -1,0 +1,19 @@
+idf_component_register(
+    SRCS 
+        "main.c"
+        "utils/map.c"
+        "utils/button.c"
+        "utils/synced_timer.c"
+        "led/effect_list.c"
+        "espnow/espnow_connect.c"
+        "espnow/espnow_server.c"
+        "espnow/espnow_client.c"
+        "webserver/http_server.c"
+    INCLUDE_DIRS 
+        "."
+        "led"
+        "led/effects"
+        "utils"
+        "espnow"
+        "webserver"
+)
