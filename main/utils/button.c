@@ -39,7 +39,6 @@ static void button_check_task(void *arg) {
 }
 
 button_handler_t button_init(uint8_t gpio) {
-    char task_name[14] = {0};
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << gpio),
         .mode = GPIO_MODE_INPUT,

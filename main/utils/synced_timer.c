@@ -2,16 +2,25 @@
 #include "esp_timer.h"
 #include "utils/synced_timer.h"
 
-static int64_t last_remote_time = 0;
-static int64_t local_time_at_sync = 0;
 
-
-void set_remote_time(const int64_t remote_time) {
-    last_remote_time = remote_time;
-    local_time_at_sync = esp_timer_get_time();
+void update_remote_time(synced_timer_t* timer, const int64_t remote_time) {
+    timer->last_remote_time = remote_time;
+    timer->local_time_at_sync = esp_timer_get_time() / 1000;
+    timer->delta_time = timer->local_time_at_sync - timer->last_local_time;
+    timer->last_local_time = timer->local_time_at_sync;
 }
 
-int64_t get_synced_time() {
-    int64_t local_delta = esp_timer_get_time() - local_time_at_sync;
-    return last_remote_time + local_delta;
+void update_local_time(synced_timer_t* timer) {
+    uint64_t current = esp_timer_get_time() / 1000;
+    timer->delta_time = current - timer->last_local_time;
+    timer->last_local_time = current;
+}
+
+int64_t get_synced_time(const synced_timer_t* timer) {
+    if (timer->is_timer_server) {
+        return timer->last_local_time;
+    }
+
+    int64_t local_delta = timer->last_local_time - timer->local_time_at_sync;
+    return timer->last_remote_time + local_delta;
 };

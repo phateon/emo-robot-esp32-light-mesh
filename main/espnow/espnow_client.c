@@ -37,7 +37,7 @@ static void handle_sync_message(
     espnow_client_t *client
 ) {
     const espnow_data_t* data = (espnow_data_t*)event->info.recv_cb.data;
-    set_remote_time(data->send_time);
+    update_remote_time(&client->timer, data->send_time);
 
     ESP_LOGI(TAG, "Server send timer update.");
 }

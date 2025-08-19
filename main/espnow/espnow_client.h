@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include "esp_now.h"
 #include "espnow/espnow_connect.h"
+#include "utils/synced_timer.h"
 
 typedef struct espnow_client_t espnow_client_t;
 
@@ -23,6 +24,7 @@ typedef void (*espnow_connect_client_event_handler_t)(
 
 // Client for esp now connections.
 struct espnow_client_t {
+    synced_timer_t timer;
     espnow_connect_t connection;                            // Pointer to the connection object
     espnow_connect_client_event_handler_t update_handler;   // Event handler for ESPNOW events.
     uint8_t server_mac[ESP_NOW_ETH_ALEN];                   // MAC address of the server this client is connected to.

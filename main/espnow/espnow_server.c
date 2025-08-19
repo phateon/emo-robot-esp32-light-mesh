@@ -1,5 +1,5 @@
 #include <stdint.h>
-
+#include <string.h>
 
 #include "esp_mac.h"
 #include "esp_err.h"
@@ -79,9 +79,9 @@ espnow_server_t* espnow_server_start(
     const char* password
 ){
     // Initialize client connection
-    int client_size = sizeof(espnow_server_t);
-    espnow_server_t* server = malloc(client_size);
-    memset(server, 0, client_size);
+    int server_size = sizeof(espnow_server_t);
+    espnow_server_t* server = malloc(server_size);
+    memset(server, 0, server_size);
     server->connection.energy_safer = true; // Start the connection in energy safer mode
     server->connection.wake_window = 100;   // How long to stay awake for in ms
     server->connection.wake_interval = 100; // How long to wait in between wake periods
