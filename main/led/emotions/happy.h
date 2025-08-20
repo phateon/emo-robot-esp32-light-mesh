@@ -12,7 +12,6 @@
 #include "led/effects/clouds.h"
 #include "led/effects/chase.h"
 
-#include "led/transitions/smooth.h"
 
 // Struct to encapsulate parameters for an effect call
 typedef struct {
@@ -36,8 +35,11 @@ happy_params_t happy_params = {
     }
 };
 
-
-void happy_init(led_renderer_t* renderer, void* params){
+void happy_reset(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
     happy_params_t* happy = (happy_params_t*)params;
     uint16_t pixel_count = renderer->buffer.length;
     happy->chase_params.pixel_count = pixel_count;
