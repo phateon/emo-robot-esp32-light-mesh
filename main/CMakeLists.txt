@@ -21,7 +21,6 @@ idf_component_register(
         "led"
         "led/effects"
         "led/emotions"
-        "led/transitions"
         "espnow"
         "webserver"
 )

@@ -31,7 +31,7 @@ typedef struct {
     float speed;              // Speed of the effect in pixel per second
     float position;           // Current position of the effect
 
-    wrap_type_t wrap_type;
+    led_wrap_type_t wrap_type;
  } drop_params_t;
 
 

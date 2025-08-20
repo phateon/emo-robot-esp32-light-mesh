@@ -10,6 +10,8 @@
 #include "led/buffer.h"
 #include "led/effect.h"
 #include "led/renderer.h"
+#include "led/effects/smooth.h"
+
 
 // Fixed parameters
 #define MAX_LED_EFFECTS 12
@@ -22,6 +24,31 @@ static map_t effect_map = {
     .size = 0,
     .capacity = MAX_LED_EFFECTS
 };
+
+static smooth_params_t smooth = {
+    .pixel_count = 0,
+    .pixel_scale = 0,
+    .position = 0,
+    .duration = 10000,
+    .current = 0,
+    .lower = 0,
+    .upper = 255,
+    .t1 = 0
+};
+
+static led_effect_intensity_t transition = {
+    .base = {
+        .init = smooth_init,
+        .update = smooth_update,
+        .reset = smooth_reset,
+        .free = smooth_free,
+        .get_state = smooth_get_effect_state,
+        .params = &smooth
+    },
+    .render = smooth_render,
+    .name = "smooth_transition"
+};
+
 
 // Construction functions
 void led_render_init(led_renderer_t* renderer) {
@@ -41,15 +68,25 @@ void led_render_init(led_renderer_t* renderer) {
     );
     led_buffer_init(&renderer->buffer, renderer->strip_config.max_leds);
     led_strip_clear(renderer->strip_handle);
+
+    transition.base.init(renderer, NULL, transition.base.params);
+    renderer->current_effect = NULL;
+    renderer->next_effect = NULL;
 }
 
-bool led_renderer_add_effect(led_renderer_t* renderer, const char *key, led_effect_t* effect) {
+bool led_renderer_add_effect(
+    led_renderer_t* renderer, 
+    const char *key, 
+    led_effect_color_t* effect
+) {
     if (map_set(&effect_map, (void *)key, (void *)effect) != 0) {
         ESP_LOGW(TAG, "Effect '%s' already exists or map is full", key);
         return false;
     }
+    // Next line will become an issue when we are not 
+    // using the same xTask setup anymore!!! FIXIT.
     effect->name = key;
-    effect->init(renderer, effect->effect_params);
+    effect->base.init(renderer, NULL, effect->base.params);
     return true;
 }
 
@@ -67,8 +104,8 @@ bool led_renderer_remove_effect(led_renderer_t* renderer, const char *key) {
     return true;
 }
 
-led_effect_t* led_renderer_find_effect(led_renderer_t* renderer, const char *key) {
-    led_effect_t* effect = (led_effect_t*)map_get(&effect_map, (void *)key);
+led_effect_color_t* led_renderer_find_effect(led_renderer_t* renderer, const char *key) {
+    led_effect_color_t* effect = (led_effect_color_t*)map_get(&effect_map, (void *)key);
     if (effect == NULL)  {
         ESP_LOGW(TAG, "Effect <%s> not found.", key);
         return NULL;
@@ -81,13 +118,13 @@ map_t* led_renderer_get_effect_map(led_renderer_t* renderer) {
 }
 
 void led_renderer_set_next_effect(led_renderer_t* renderer, const char *key) {
-    led_effect_t* effect = led_renderer_find_effect(renderer, key);
+    led_effect_color_t* effect = led_renderer_find_effect(renderer, key);
     if (effect==NULL) {
         return;
     }
 
-    led_effect_t* current = renderer->current_effect;
-    led_effect_t* next = renderer->next_effect;
+    led_effect_color_t* current = renderer->current_effect;
+    led_effect_color_t* next = renderer->next_effect;
 
     if (current == NULL) {
         ESP_LOGW(TAG, "Current set as <%s> from NULL", key);
@@ -127,29 +164,32 @@ void led_renderer_clear(led_renderer_t* renderer) {
 }
 
 
-void led_render(led_renderer_t* renderer, synced_timer_t* timer) {
+void led_render(
+    led_renderer_t* renderer, 
+    synced_timer_t* timer
+) {
     if(renderer->current_effect == NULL) {
-        ESP_LOGW(TAG, "No current effect selected.");
+        // ESP_LOGW(TAG, "No current effect selected.");
         return;
     }
 
+    led_effect_color_t* current = renderer->current_effect;
+    led_effect_color_t* next = renderer->next_effect;
     rgb_color_t current_color = {0};
     rgb_color_t next_color = {0};
     uint8_t blend = 0;
 
-    led_effect_t* current = renderer->current_effect;
-    led_effect_t* next = renderer->next_effect;
-    current->pre_render_effect(timer, current->effect_params);
+    current->base.update(renderer, timer, current->base.params);
     if(next != NULL) {
-        current->pre_render_transition(timer, current->transition_params);
-        next->pre_render_effect(timer, next->effect_params);
+        transition.base.update(renderer, timer, transition.base.params);
+        next->base.update(renderer, timer, next->base.params);
     }
 
     for(uint16_t pos = 0; pos < renderer->buffer.length; pos++) {
-        current->render_effect(pos, current->effect_params, &current_color);
+        current->render(pos, current->base.params, &current_color);
         if(next != NULL) {
-            blend = current->render_transition(pos, current->transition_params);
-            next->render_effect(pos, next->effect_params, &next_color);
+            blend = transition.render(pos, transition.base.params);
+            next->render(pos, next->base.params, &next_color);
         }
         current_color.r = blend8(current_color.r, next_color.r, blend);
         current_color.g = blend8(current_color.g, next_color.g, blend);
@@ -157,16 +197,15 @@ void led_render(led_renderer_t* renderer, synced_timer_t* timer) {
         led_buffer_apply(&renderer->buffer, pos, &current_color, BUFFER_ADD);
     }
 
-    transition_state_t state = current->get_transition_state(
-        timer, 
-        current->transition_params
+    led_effect_state_t state = transition.base.get_state(
+        transition.base.params
     );
     
-    if(state == TRANSITION_COMPLETE) {
+    if(state == LED_EFFECT_COMPLETE) {
         if(next != NULL) {
             renderer->current_effect = next;
             renderer->next_effect = NULL;
-            current->reset_transition(current->transition_params);
+            transition.base.reset(renderer, timer, transition.base.params);
         }
     }
 }

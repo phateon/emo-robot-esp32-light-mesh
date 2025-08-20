@@ -12,7 +12,6 @@
 #include "led/effects/clouds.h"
 #include "led/effects/chase.h"
 
-#include "led/transitions/smooth.h"
 
 // Struct to encapsulate parameters for an effect call
 typedef struct {
@@ -37,17 +36,35 @@ relaxed_params_t relaxed_params = {
 };
 
 
-void relaxed_init(led_renderer_t* renderer, void* params){
+void relaxed_reset(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
     relaxed_params_t* relaxed = (relaxed_params_t*)params;
     uint16_t pixel_count = renderer->buffer.length;
     relaxed->chase_params.pixel_count = pixel_count;
 }
 
+void relaxed_init(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
+    // relaxed_params_t* relaxed = (relaxed_params_t*)params;
+    relaxed_reset(renderer, timer, params);
+}
 
-void relaxed_free(led_renderer_t* renderer, void* params) {}
+void relaxed_free(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
+    // Do nothing
+}
 
-
-void relaxed_before_render(
+void relaxed_update(
+    const led_renderer_t* renderer,
     const synced_timer_t* timer,
     void* params
 ) {
@@ -56,6 +73,10 @@ void relaxed_before_render(
     cloud_before_render(timer, (void*)&relaxed->cloud_params);
 }
 
+led_effect_state_t relaxed_get_state(const void* params) {
+    // relaxed_params_t* relaxed = (relaxed_params_t*)params;
+    return LED_EFFECT_IN_PROGRESS;
+} 
 
 void relaxed_render(
     const uint16_t position,
@@ -72,19 +93,16 @@ void relaxed_render(
     color->b = sclamp8((uint16_t)fmul8(cloud, 200) + fmul8(chase, 50));
 }
 
-
-led_effect_t relaxed_effect = {
-    .init = relaxed_init,
-
-    .pre_render_effect = relaxed_before_render,
-    .render_effect = relaxed_render,
-    .effect_params = &relaxed_params,
-
-    .pre_render_transition = smooth_before_render,
-    .get_transition_state = smooth_transition_state,
-    .render_transition = smooth_render,
-    .reset_transition = smooth_reset,
-    .transition_params = &smooth_params
+led_effect_color_t relaxed_effect = {
+    .base = {
+        .init = relaxed_init,
+        .update = relaxed_update,
+        .reset = relaxed_reset,
+        .free = relaxed_free,
+        .get_state = relaxed_get_state,
+        .params = &relaxed_params
+    },
+    .render = relaxed_render
 };
 
 #endif // LED_EFFECT_ANGER_H

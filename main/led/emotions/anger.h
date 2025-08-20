@@ -13,7 +13,6 @@
 #include "led/effects/clouds.h"
 #include "led/effects/lightning.h"
 
-#include "led/transitions/smooth.h"
 
 // Struct to encapsulate parameters for an effect call
 typedef struct {
@@ -39,7 +38,19 @@ anger_params_t anger_params = {
     }
 };
 
-void anger_init(led_renderer_t* renderer, void* params){
+void anger_reset(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
+    // anger_params_t* anger = (anger_params_t*)params;
+}
+
+void anger_init(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
     uint16_t pixel_count = renderer->buffer.length;
     size_t pixel_size = sizeof(int16_t) * pixel_count;
     anger_params_t* anger = (anger_params_t*)params;
@@ -48,13 +59,18 @@ void anger_init(led_renderer_t* renderer, void* params){
     memset(anger->lightning_params.pixels, 0, pixel_size);
 }
 
-void anger_free(led_renderer_t* renderer, void* params) {
+void anger_free(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
     anger_params_t* anger = (anger_params_t*)params;
     free(anger->lightning_params.pixels);
 }
 
-void anger_before_render(
-    const synced_timer_t* timer, 
+void anger_update(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
     void* params
 ) {
     anger_params_t* anger_params = (anger_params_t*)params;
@@ -66,6 +82,11 @@ void anger_before_render(
  
     cloud_before_render(timer, (void*)&anger_params->cloud_params);
     lightning_before_render(timer, (void*)&anger_params->lightning_params);
+}
+
+led_effect_state_t anger_get_state(const void* params) {
+    // anger_params_t* anger = (anger_params_t*)params;
+    return LED_EFFECT_IN_PROGRESS;
 }
 
 void anger_render(
@@ -84,18 +105,16 @@ void anger_render(
     color->b = sclamp8(b);
 }
 
-led_effect_t anger_effect = {
-    .init = anger_init,
-
-    .pre_render_effect = anger_before_render,
-    .render_effect = anger_render,
-    .effect_params = &anger_params,
-
-    .pre_render_transition = smooth_before_render,
-    .get_transition_state = smooth_transition_state,
-    .render_transition = smooth_render,
-    .reset_transition = smooth_reset,
-    .transition_params = &smooth_params
+led_effect_color_t anger_effect = {
+    .base = {
+        .init = anger_init,
+        .update = anger_update,
+        .reset = anger_reset,
+        .free = anger_free,
+        .get_state = anger_get_state,
+        .params = &anger_params
+    },
+    .render = anger_render
 };
 
 #endif // LED_EFFECT_ANGER_H

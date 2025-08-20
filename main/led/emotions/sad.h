@@ -15,8 +15,6 @@
 #include "led/effects/glow.h"
 #include "led/effects/clouds.h"
 
-#include "led/transitions/smooth.h"
-
 // Struct to encapsulate parameters for an effect call
 typedef enum {
     SAD_EFFECT_STAGE_BUILD,
@@ -85,8 +83,11 @@ sad_params_t sad_params = {
     }
 };
 
-
-void sad_reset_effect(void* params) {
+void sad_reset(
+    const led_renderer_t* renderer, 
+    const synced_timer_t* timer, 
+    void* params
+) {
     sad_params_t* sad = (sad_params_t*)params;
     sad->stage = SAD_EFFECT_STAGE_BUILD;
     sad->explosion.current = 0;
@@ -97,21 +98,37 @@ void sad_reset_effect(void* params) {
     sad->glow.current = 0;
 }
 
-
-void sad_init(led_renderer_t* renderer, void* params){
+void sad_init(
+    const led_renderer_t* renderer, 
+    const synced_timer_t* timer, 
+    void* params
+){
     sad_params_t* sad = (sad_params_t*)params;
     uint16_t pixel_count = renderer->buffer.length;
     sad->pixel_count = pixel_count;
     sad->drop.pixel_count = pixel_count;
     sad->drop.acceleration = pixel_count * 2;
-    sad_reset_effect(params);
+    sad_reset(renderer, timer, params);
 }
 
+void sad_free(
+    const led_renderer_t* renderer, 
+    const synced_timer_t* timer, 
+    void* params
+) {
+    // Do nothing
+}
 
-void sad_free(led_renderer_t* renderer, void* params) {}
+led_effect_state_t sad_get_state(const void* params) {
+    const sad_params_t* sad = (const sad_params_t*)params;
+    if(sad->stage == SAD_EFFECT_STAGE_DONE) {
+        return LED_EFFECT_COMPLETE;
+    }
+    return LED_EFFECT_IN_PROGRESS;
+}
 
-
-void sad_before_render(
+void sad_update(
+    const led_renderer_t* renderer,
     const synced_timer_t* timer,
     void* params
 ) {
@@ -139,13 +156,12 @@ void sad_before_render(
             fade_before_render(timer, (void*)&sad->fade);
             break;
         case SAD_EFFECT_STAGE_DONE:
-            sad_reset_effect(params);
+            sad_reset(renderer, timer, params);
             break; 
         default:
             break;
     }
 }
-
 
 void sad_render(
     const uint16_t position,
@@ -180,18 +196,16 @@ void sad_render(
     color->b = sclamp8((uint8_t)fmul8(c, 40) + fmul8(intensity, 240));
 }
 
-led_effect_t sad_effect = {
-    .init = sad_init,
-
-    .pre_render_effect = sad_before_render,
-    .render_effect = sad_render,
-    .effect_params = &sad_params,
-
-    .pre_render_transition = smooth_before_render,
-    .get_transition_state = smooth_transition_state,
-    .render_transition = smooth_render,
-    .reset_transition = smooth_reset,
-    .transition_params = &smooth_params
+led_effect_color_t sad_effect = {
+    .base = {
+        .init = sad_init,
+        .update = sad_update,
+        .reset = sad_reset,
+        .free = sad_free,
+        .get_state = sad_get_state,
+        .params = &sad_params
+    },
+    .render = sad_render
 };
 
 #endif // LED_EMOTION_SAD_H

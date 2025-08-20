@@ -16,8 +16,9 @@ typedef struct led_renderer_t {
     led_strip_config_t strip_config;
     led_strip_handle_t strip_handle;
     led_strip_rmt_config_t rmt_config;
-    led_effect_t* current_effect;
-    led_effect_t* next_effect;
+    led_effect_color_t* current_effect;
+    led_effect_color_t* next_effect;
+    led_effect_intensity_t* transition;
 } led_renderer_t;
 
 
@@ -29,7 +30,7 @@ void led_render_free(led_renderer_t* renderer);
 bool led_renderer_add_effect(
     led_renderer_t* renderer, 
     const char *key, 
-    led_effect_t* effect
+    led_effect_color_t* effect
 );
 
 bool led_renderer_remove_effect(
@@ -37,7 +38,7 @@ bool led_renderer_remove_effect(
     const char *key
 );
 
-led_effect_t* led_renderer_find_effect(
+led_effect_color_t* led_renderer_find_effect(
     led_renderer_t* renderer, 
     const char *key
 );

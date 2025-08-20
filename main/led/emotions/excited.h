@@ -1,5 +1,5 @@
-#ifndef LED_EFFECT_HAPPY_H
-#define LED_EFFECT_HAPPY_H
+#ifndef LED_EFFECT_EXCITED_H
+#define LED_EFFECT_EXCITED_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -17,9 +17,9 @@
 typedef struct {
     chase_params_t chase_params;
     cloud_params_t cloud_params;
-} happy_params_t;
+} excited_params_t;
 
-happy_params_t happy_params = {
+excited_params_t excited_params = {
     .chase_params = {
         .position = 100,
         .pixel_count = 0,
@@ -35,26 +35,26 @@ happy_params_t happy_params = {
     }
 };
 
-void happy_reset(
+void excited_reset(
     const led_renderer_t* renderer,
     const synced_timer_t* timer,
     void* params
 ) {
-    happy_params_t* happy = (happy_params_t*)params;
+    excited_params_t* excited = (excited_params_t*)params;
     uint16_t pixel_count = renderer->buffer.length;
-    happy->chase_params.pixel_count = pixel_count;
+    excited->chase_params.pixel_count = pixel_count;
 }
 
-void happy_init(
+void excited_init(
     const led_renderer_t* renderer,
     const synced_timer_t* timer,
     void* params
 ) {
-    // happy_params_t* happy = (happy_params_t*)params;
-    happy_reset(renderer, timer, params);
+    // excited_params_t* excited = (excited_params_t*)params;
+    excited_reset(renderer, timer, params);
 }
 
-void happy_free(
+void excited_free(
     const led_renderer_t* renderer,
     const synced_timer_t* timer,
     void* params
@@ -62,43 +62,43 @@ void happy_free(
     // Do nothing
 }
 
-void happy_update(
+void excited_update(
     const led_renderer_t* renderer,
     const synced_timer_t* timer,
     void* params
 ) {
-    happy_params_t* happy = (happy_params_t*)params;
-    chase_before_render(timer, (void*)&happy->chase_params);
-    cloud_before_render(timer, (void*)&happy->cloud_params);
+    excited_params_t* excited = (excited_params_t*)params;
+    chase_before_render(timer, (void*)&excited->chase_params);
+    cloud_before_render(timer, (void*)&excited->cloud_params);
 }
 
-led_effect_state_t happy_get_state(const void* params) {
-    // happy_params_t* happy = (happy_params_t*)params;
+led_effect_state_t excited_get_state(const void* params) {
+    // excited_params_t* excited = (excited_params_t*)params;
     return LED_EFFECT_IN_PROGRESS;
 }
 
-void happy_render(
+void excited_render(
     const uint16_t position,
     const void* params,
     rgb_color_t* color
 ) {
-    //const happy_params_t* happy_params = (const happy_params_t*)params;
+    //const excited_params_t* excited_params = (const excited_params_t*)params;
     
     color->r = 0;
-    color->g = 0;
+    color->g = 255;
     color->b = 255;
 }
 
-led_effect_color_t happy_effect = {
+led_effect_color_t excited_effect = {
     .base = {
-        .init = happy_init,
-        .update = happy_update,
-        .reset = happy_reset,
-        .free = happy_free,
-        .get_state = happy_get_state,
-        .params = &happy_params
+        .init = excited_init,
+        .update = excited_update,
+        .reset = excited_reset,
+        .free = excited_free,
+        .get_state = excited_get_state,
+        .params = &excited_params
     },
-    .render = happy_render
+    .render = excited_render
 };
 
-#endif // LED_EFFECT_HAPPY_H
+#endif // LED_EFFECT_EXCITED_H

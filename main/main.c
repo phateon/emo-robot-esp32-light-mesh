@@ -25,10 +25,11 @@
 #include "led/emotions/sad.h"
 #include "led/emotions/anger.h"
 #include "led/emotions/happy.h"
-#include "led/emotions/relaxed.h"
 #include "led/emotions/flirty.h"
-
-#include "led/transitions/smooth.h"
+#include "led/emotions/relaxed.h"
+#include "led/emotions/excited.h"
+#include "led/emotions/confused.h"
+#include "led/emotions/surprised.h"
 
 
 led_renderer_t* renderer_handler = NULL;
@@ -44,7 +45,7 @@ void on_button_release(uint8_t gpio) {
         effect_index = 0;
     }
 
-    led_effect_t* effect = effect_map->entries[effect_index].value;
+    led_effect_color_t* effect = effect_map->entries[effect_index].value;
     led_renderer_set_next_effect(renderer_handler, effect->name);
     effect_index++;
 }
@@ -134,13 +135,16 @@ void led_render_task(void *arg) {
     led_render_init(&renderer);
     renderer_handler = &renderer;
 
-    //led_renderer_add_effect(&renderer, "angry", &anger_effect);
+    led_renderer_add_effect(&renderer, "sad", &sad_effect);
+    led_renderer_add_effect(&renderer, "angry", &anger_effect);
     led_renderer_add_effect(&renderer, "happy", &happy_effect);
-    //led_renderer_add_effect(&renderer, "calm", &relaxed_effect);
+    led_renderer_add_effect(&renderer, "calm", &relaxed_effect);
     led_renderer_add_effect(&renderer, "flirty", &flirty_effect);
-    //led_renderer_add_effect(&renderer, "sad", &sad_effect);
-
-    led_renderer_set_next_effect(renderer_handler, "sad");
+    led_renderer_add_effect(&renderer, "excited", &excited_effect);
+    led_renderer_add_effect(&renderer, "confused", &confused_effect);
+    led_renderer_add_effect(&renderer, "surprised", &surprised_effect);
+ 
+    led_renderer_set_next_effect(renderer_handler, "happy");
 
     while (1) {
         update_local_time(timer);
@@ -189,7 +193,7 @@ void app_main(void) {
     start_web_client();
     
     xTaskCreate(led_render_task, "render_task", 2048, (void*)timer, tskIDLE_PRIORITY + 3, NULL);
-    //xTaskCreate(web_server_task, "web_server_task", 8192 * 2, NULL, tskIDLE_PRIORITY + 2, NULL);
+    xTaskCreate(web_server_task, "web_server_task", 8192 * 2, NULL, tskIDLE_PRIORITY + 2, NULL);
     //xTaskCreate(measure_temp_task, "measure_temp_task", 2048, NULL, tskIDLE_PRIORITY, NULL);
     //xTaskCreate(monitor_resource_usage_task, "monitor_task", 2048, NULL, tskIDLE_PRIORITY + 1, NULL);
 }

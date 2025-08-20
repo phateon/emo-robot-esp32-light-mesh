@@ -5,72 +5,66 @@
 #include "utils/color.h"
 #include "utils/synced_timer.h"
 
-typedef enum transition_state_t {
-    TRANSITION_NOT_STARTED,
-    TRANSITION_IN_PROGRESS,
-    TRANSITION_COMPLETE
-} transition_state_t;
-
-typedef enum wrap_type_t {
-    WRAP_LOOP,
-    WRAP_CLAMP
-} wrap_type_t;
-
 
 typedef struct led_renderer_t led_renderer_t; 
 
-// Initi all features of the effect
-typedef void (*effect_init_t)(
-    led_renderer_t* renderer,
-    void* params
-);
+// Type declarations
+typedef enum led_effect_state_t {
+    LED_EFFECT_NOT_STARTED,
+    LED_EFFECT_IN_PROGRESS,
+    LED_EFFECT_COMPLETE
+} led_effect_state_t;
 
-// Function pointer type for effect pre render function
-typedef void (*effect_pre_render_t)(
+typedef enum led_wrap_type_t {
+    WRAP_LOOP,
+    WRAP_CLAMP
+} led_wrap_type_t;
+
+// Edit an effect
+typedef void (*led_effect_change_t)(
+    const led_renderer_t* renderer,
     const synced_timer_t* timer, 
     void* params
 );
 
-// Function pointer type for effect render function
-typedef void (*effect_reset_t)(
-    const void* params
-);
-
-// Function pointer type for effect render function
-typedef void (*effect_render_color_t)(
+// Render color
+typedef void (*led_render_color_t)(
     const uint16_t position,
     const void* params,
     rgb_color_t* color
 );
 
-// Function pointer type for effect render function
-typedef uint8_t (*effect_render_intensity_t)(
+// Render intensity value
+typedef uint8_t (*led_render_intensity_t)(
     const uint16_t position,
     const void* params
 );
 
-// Function pointer type for effect render function
-typedef transition_state_t (*get_transition_state_t)(
-    const synced_timer_t* timer, 
-    void* params
-);
+// Get the current state
+typedef led_effect_state_t (*get_led_effect_state_t)(const void* params);
 
 // Struct for an effect
 typedef struct {
-    effect_init_t init;
+    led_effect_change_t init;
+    led_effect_change_t update;
+    led_effect_change_t reset;
+    led_effect_change_t free;
+    get_led_effect_state_t get_state;
+    void* params;
+} led_effect_base_t;
 
-    effect_pre_render_t pre_render_effect;
-    effect_render_color_t render_effect;
-    effect_reset_t reset_effect;
-    void* effect_params;
-
-    effect_pre_render_t pre_render_transition;
-    effect_render_intensity_t render_transition;
-    effect_reset_t reset_transition;
-    get_transition_state_t get_transition_state;
-    void* transition_params;
-
+// Render color effect
+typedef struct {
+    led_effect_base_t base;
+    led_render_color_t render;
     const char* name;
-} led_effect_t;
+} led_effect_color_t;
+
+// Render intensity effect
+typedef struct {
+    led_effect_base_t base;
+    led_render_intensity_t render;
+    const char* name;
+} led_effect_intensity_t;
 
 #endif //  LED_EFFECT_H

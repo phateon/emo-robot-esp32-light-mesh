@@ -12,48 +12,81 @@
 #include "led/effects/clouds.h"
 #include "led/effects/chase.h"
 
-#include "led/transitions/smooth.h"
 
-// Struct to encapsulate parameters for an effect call
+#define FLIRTY_CHASE_COUNT 4
+
 typedef struct {
     chase_params_t chase_params;
+    rgb_color_t color;
+} flirty_chase_t;
+
+typedef struct {
+    flirty_chase_t chases[FLIRTY_CHASE_COUNT];
     cloud_params_t cloud_params;
+    uint16_t pixel_count;
 } flirty_params_t;
 
-flirty_params_t flirty_params = {
-    .chase_params = {
-        .position = 100,
-        .pixel_count = 0,
-        .speed = 10.5,
-        .width = 9
-    },
-    .cloud_params = {
-        .step_size = 10000,
-        .min_intensity = 100,
-        .max_intensity = 255,
-        .speed = 4.0,
-        .t1 = 0
-    }
-};
+flirty_params_t flirty_params;
 
 
-void flirty_init(led_renderer_t* renderer, void* params){
-    flirty_params_t* flirty = (flirty_params_t*)params;
-    uint16_t pixel_count = renderer->buffer.length;
-    flirty->chase_params.pixel_count = pixel_count;
-}
 
-
-void flirty_free(led_renderer_t* renderer, void* params) {}
-
-
-void flirty_before_render(
+void flirty_reset(
+    const led_renderer_t* renderer,
     const synced_timer_t* timer,
     void* params
 ) {
     flirty_params_t* flirty = (flirty_params_t*)params;
-    chase_before_render(timer, (void*)&flirty->chase_params);
-    cloud_before_render(timer, (void*)&flirty->cloud_params);
+    flirty->pixel_count = renderer->buffer.length;
+    for (int i = 0; i < FLIRTY_CHASE_COUNT; ++i) {
+        flirty->chases[i].chase_params.pixel_count = flirty->pixel_count;
+        flirty->chases[i].chase_params.position = rand() % flirty->pixel_count;
+        flirty->chases[i].chase_params.speed = (rand() % 2000 - 1000) / 50.0f;
+        flirty->chases[i].chase_params.width = 3 + rand() % 5; // 5 to 14
+        flirty->chases[i].color.r = rand() % 240;
+        flirty->chases[i].color.g = rand() % 50;
+        flirty->chases[i].color.b = rand() % 20;
+    }
+    // Cloud params (unchanged)
+    flirty->cloud_params.step_size = 10000;
+    flirty->cloud_params.min_intensity = 100;
+    flirty->cloud_params.max_intensity = 255;
+    flirty->cloud_params.speed = 4.0;
+    flirty->cloud_params.t1 = 0;
+}
+
+
+void flirty_init(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
+    flirty_reset(renderer, timer, params);
+}
+
+void flirty_free(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
+    // Do nothing
+}
+
+
+void flirty_update(
+    const led_renderer_t* renderer,
+    const synced_timer_t* timer,
+    void* params
+) {
+    flirty_params_t* flirty = (flirty_params_t*)params;
+    for (int i = 0; i < FLIRTY_CHASE_COUNT; ++i) {
+        chase_before_render(timer, (void*)&flirty->chases[i].chase_params);
+    }
+    //cloud_before_render(timer, (void*)&flirty->cloud_params);
+}
+
+led_effect_state_t flirty_get_state(const void* params) {
+    // flirty_params_t* flirty = (flirty_params_t*)params;
+    return LED_EFFECT_IN_PROGRESS;
 }
 
 
@@ -62,26 +95,33 @@ void flirty_render(
     const void* params,
     rgb_color_t* color
 ) {
-    //const flirty_params_t* flirty_params = (const flirty_params_t*)params;
-    
-    color->r = 255;
+    const flirty_params_t* flirty = (const flirty_params_t*)params;
+    // Default: black
+    color->r = 0;
     color->g = 0;
     color->b = 0;
+    // Render all chases
+    for (int i = 0; i < FLIRTY_CHASE_COUNT; ++i) {
+        const chase_params_t* chase = &flirty->chases[i].chase_params;
+        const uint8_t intensity = chase_render(position, (void*)chase);
+        color->r = max8(color->r, fmul8(flirty->chases[i].color.r, intensity));
+        color->g = max8(color->g, fmul8(flirty->chases[i].color.g, intensity));
+        color->b = max8(color->b, fmul8(flirty->chases[i].color.b, intensity));
+    }
+    // Optionally, blend with cloud effect or add more logic here
 }
 
 
-led_effect_t flirty_effect = {
-    .init = flirty_init,
-
-    .pre_render_effect = flirty_before_render,
-    .render_effect = flirty_render,
-    .effect_params = &flirty_params,
-
-    .pre_render_transition = smooth_before_render,
-    .get_transition_state = smooth_transition_state,
-    .render_transition = smooth_render,
-    .reset_transition = smooth_reset,
-    .transition_params = &smooth_params
+led_effect_color_t flirty_effect = {
+    .base = {
+        .init = flirty_init,
+        .update = flirty_update,
+        .reset = flirty_reset,
+        .free = flirty_free,
+        .get_state = flirty_get_state,
+        .params = &flirty_params
+    },
+    .render = flirty_render
 };
 
 #endif // LED_EFFECT_ANGER_H
